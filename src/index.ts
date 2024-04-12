@@ -10,6 +10,14 @@ class Group {
   adminId: string;
   members: string[];
   createdAt: Date;
+
+  constructor(name: string, adminId: string) {
+    this.id = uuidv4();
+    this.name = name;
+    this.adminId = adminId;
+    this.members = [];
+    this.createdAt = new Date();
+  }
 }
 
 // Define the Member class to represent members of a group
@@ -18,6 +26,13 @@ class Member {
   name: string;
   email: string;
   createdAt: Date;
+
+  constructor(name: string, email: string) {
+    this.id = uuidv4();
+    this.name = name;
+    this.email = email;
+    this.createdAt = new Date();
+  }
 }
 
 // Define the Contribution class to represent contributions made by members
@@ -27,6 +42,14 @@ class Contribution {
   memberId: string;
   amount: number;
   createdAt: Date;
+
+  constructor(groupId: string, memberId: string, amount: number) {
+    this.id = uuidv4();
+    this.groupId = groupId;
+    this.memberId = memberId;
+    this.amount = amount;
+    this.createdAt = new Date();
+  }
 }
 
 // Initialize stable maps for storing groups, members, and contributions
@@ -41,12 +64,8 @@ export default Server(() => {
 
   // Endpoint for creating a new group
   app.post("/groups", (req, res) => {
-    const group: Group = {
-      id: uuidv4(),
-      createdAt: getCurrentDate(),
-      members: [],
-      ...req.body,
-    };
+    const { name, adminId } = req.body;
+    const group = new Group(name, adminId);
     groupsStorage.insert(group.id, group);
     res.json(group);
   });
@@ -54,13 +73,12 @@ export default Server(() => {
   // Endpoint for adding a member to a group
   app.post("/groups/:groupId/members/:memberId", (req, res) => {
     const { groupId, memberId } = req.params;
-    const groupOpt = groupsStorage.get(groupId);
-    const memberOpt = membersStorage.get(memberId);
+    const group = groupsStorage.get(groupId);
+    const member = membersStorage.get(memberId);
     
-    if ("None" in groupOpt || "None" in memberOpt) {
+    if (!group || !member) {
       res.status(404).send("Group or member not found");
     } else {
-      const group = groupOpt.Some;
       if (!group.members.includes(memberId)) {
         group.members.push(memberId);
         groupsStorage.insert(groupId, group);
@@ -73,26 +91,20 @@ export default Server(() => {
 
   // Endpoint for creating a new member
   app.post("/members", (req, res) => {
-    if (!req.body.name || !req.body.email) {
+    const { name, email } = req.body;
+    if (!name || !email) {
       res.status(400).send("Name and email are required");
       return;
     }
-    const member: Member = {
-      id: uuidv4(),
-      createdAt: getCurrentDate(),
-      ...req.body,
-    };
+    const member = new Member(name, email);
     membersStorage.insert(member.id, member);
     res.json(member);
   });
 
   // Endpoint for creating a new contribution
   app.post("/contributions", (req, res) => {
-    const contribution: Contribution = {
-      id: uuidv4(),
-      createdAt: getCurrentDate(),
-      ...req.body,
-    };
+    const { groupId, memberId, amount } = req.body;
+    const contribution = new Contribution(groupId, memberId, amount);
     contributionsStorage.insert(contribution.id, contribution);
     res.json(contribution);
   });
@@ -100,7 +112,9 @@ export default Server(() => {
   // Endpoint for retrieving all contributions for a group
   app.get("/groups/:groupId/contributions", (req, res) => {
     const { groupId } = req.params;
-    const contributions = contributionsStorage.values().filter(contribution => contribution.groupId === groupId);
+    const contributions = contributionsStorage
+      .values()
+      .filter(contribution => contribution.groupId === groupId);
     res.json(contributions);
   });
 
@@ -110,6 +124,6 @@ export default Server(() => {
 
 // Function to get the current date
 function getCurrentDate() {
-  const timestamp = new Number(ic.time());
-  return new Date(timestamp.valueOf() / 1000_000);
+  const timestamp = ic.time();
+  return new Date(timestamp / 1000000);
 }
