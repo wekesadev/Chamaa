@@ -10,6 +10,14 @@ class Group {
   adminId: string;
   members: string[];
   createdAt: Date;
+
+  constructor(name: string, adminId: string) {
+    this.id = uuidv4();
+    this.name = name;
+    this.adminId = adminId;
+    this.members = [];
+    this.createdAt = new Date();
+  }
 }
 
 // Define the Member class to represent members of a group
@@ -18,6 +26,13 @@ class Member {
   name: string;
   email: string;
   createdAt: Date;
+
+  constructor(name: string, email: string) {
+    this.id = uuidv4();
+    this.name = name;
+    this.email = email;
+    this.createdAt = new Date();
+  }
 }
 
 // Define the Contribution class to represent contributions made by members
@@ -27,12 +42,20 @@ class Contribution {
   memberId: string;
   amount: number;
   createdAt: Date;
+
+  constructor(groupId: string, memberId: string, amount: number) {
+    this.id = uuidv4();
+    this.groupId = groupId;
+    this.memberId = memberId;
+    this.amount = amount;
+    this.createdAt = new Date();
+  }
 }
 
 // Initialize stable maps for storing groups, members, and contributions
-const groupsStorage = StableBTreeMap<string, Group>(5);
-const membersStorage = StableBTreeMap<string, Member>(6);
-const contributionsStorage = StableBTreeMap<string, Contribution>(7);
+const groupsStorage = StableBTreeMap<string, Group>(0);
+const membersStorage = StableBTreeMap<string, Member>(1);
+const contributionsStorage = StableBTreeMap<string, Contribution>(3);
 
 // Define the express server
 export default Server(() => {
@@ -51,12 +74,17 @@ export default Server(() => {
     res.json(group);
   });
 
+  // Endpoint for retrieving all groups
+  app.get("/groups", (req, res) => {
+    res.json(groupsStorage.values());
+  });
+
   // Endpoint for adding a member to a group
   app.post("/groups/:groupId/members/:memberId", (req, res) => {
     const { groupId, memberId } = req.params;
     const groupOpt = groupsStorage.get(groupId);
     const memberOpt = membersStorage.get(memberId);
-    
+
     if ("None" in groupOpt || "None" in memberOpt) {
       res.status(404).send("Group or member not found");
     } else {
@@ -100,7 +128,9 @@ export default Server(() => {
   // Endpoint for retrieving all contributions for a group
   app.get("/groups/:groupId/contributions", (req, res) => {
     const { groupId } = req.params;
-    const contributions = contributionsStorage.values().filter(contribution => contribution.groupId === groupId);
+    const contributions = contributionsStorage
+      .values()
+      .filter((contribution) => contribution.groupId === groupId);
     res.json(contributions);
   });
 
