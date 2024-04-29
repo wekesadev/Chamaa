@@ -380,9 +380,3 @@ export default Server(() => {
   // Start the server
   return app.listen();
 });
-
-// Function to get the current date
-function getCurrentDate() {
-  const timestamp = new Number(ic.time());
-  return new Date(timestamp.valueOf() / 1000_000);
-}
